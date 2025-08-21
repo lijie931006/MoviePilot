@@ -54,7 +54,7 @@ RUN python3 -m venv ${VENV_PATH} \
     && ${VENV_PATH}/bin/pip install Cython pip-tools
 
 # 复制依赖文件并安装到虚拟环境
-COPY ../requirements.in requirements.in
+COPY requirements.in requirements.in
 RUN ${VENV_PATH}/bin/pip-compile requirements.in \
     && ${VENV_PATH}/bin/pip install -r requirements.txt \
     && ${VENV_PATH}/bin/playwright install-deps chromium \
@@ -68,7 +68,7 @@ RUN ${VENV_PATH}/bin/pip-compile requirements.in \
         /var/tmp/*
 
 # 复制应用代码
-COPY .. .
+COPY . .
 
 # 配置nginx和其他文件
 RUN cp -f /app/docker/nginx.common.conf /etc/nginx/common.conf \
