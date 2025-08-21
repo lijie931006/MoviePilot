@@ -23,12 +23,12 @@ jobs:
         docker build -f docker/Dockerfile -t ${{ secrets.DOCKERHUB_USERNAME }}/moviepilot-v2:latest .
         docker push ${{ secrets.DOCKERHUB_USERNAME }}/moviepilot-v2:latest
 
-    - name: Deploy to Server via SSH
-      uses: appleboy/ssh-action@v0.1.6
-      with:
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USERNAME }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        script: |
-          cd /home/lijie/
-          ./deploy.sh
+    # - name: Deploy to Server via SSH
+    #   uses: appleboy/ssh-action@v0.1.6
+    #   with:
+    #     host: ${{ secrets.SSH_HOST }}
+    #     username: ${{ secrets.SSH_USERNAME }}
+    #     key: ${{ secrets.SSH_PRIVATE_KEY }}
+    #     script: |
+    #       cd /home/lijie/
+    #       ./deploy.sh
