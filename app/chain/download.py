@@ -274,7 +274,7 @@ class DownloadChain(ChainBase):
         else:
             _downloader, _hash, _layout, error_msg = None, None, None, "未找到下载器"
 
-        if _hash and _media:
+        if _hash:
             # `不创建子文件夹` 或 `不存在子文件夹`
             if _layout == "NoSubfolder" or not _folder_name:
                 # 下载路径记录至文件
@@ -288,76 +288,77 @@ class DownloadChain(ChainBase):
             # 文件保存路径
             _save_path = download_dir if _layout == "NoSubfolder" or not _folder_name else download_path
 
-            # 登记下载记录
-            downloadhis = DownloadHistoryOper()
-            downloadhis.add(
-                path=str(download_path),
-                type=_media.type.value,
-                title=_media.title,
-                year=_media.year,
-                tmdbid=_media.tmdb_id,
-                imdbid=_media.imdb_id,
-                tvdbid=_media.tvdb_id,
-                doubanid=_media.douban_id,
-                seasons=_meta.season,
-                episodes=download_episodes or _meta.episode,
-                image=_media.get_backdrop_image(),
-                downloader=_downloader,
-                download_hash=_hash,
-                torrent_name=_torrent.title,
-                torrent_description=_torrent.description,
-                torrent_site=_torrent.site_name,
-                userid=userid,
-                username=username,
-                channel=channel.value if channel else None,
-                date=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
-                media_category=_media.category,
-                episode_group=_media.episode_group,
-                note={"source": source}
-            )
-
-            # 登记下载文件
-            files_to_add = []
-            for file in _file_list:
-                if episodes:
-                    # 识别文件集
-                    file_meta = MetaInfo(Path(file).stem)
-                    if not file_meta.begin_episode \
-                            or file_meta.begin_episode not in episodes:
-                        continue
-                # 只处理视频格式
-                if not Path(file).suffix \
-                        or Path(file).suffix.lower() not in settings.RMT_MEDIAEXT:
-                    continue
-                files_to_add.append({
-                    "download_hash": _hash,
-                    "downloader": _downloader,
-                    "fullpath": str(_save_path / file),
-                    "savepath": str(_save_path),
-                    "filepath": file,
-                    "torrentname": _meta.org_string,
-                })
-            if files_to_add:
-                downloadhis.add_files(files_to_add)
-
-            # 下载成功发送消息
-            self.post_message(
-                Notification(
-                    channel=channel,
-                    source=source if channel else None,
-                    mtype=NotificationType.Download,
-                    ctype=ContentType.DownloadAdded,
-                    image=_media.get_message_image(),
-                    link=settings.MP_DOMAIN('/#/downloading'),
+            if _media: # 媒体文件存在，rss有些是没有的
+                # 登记下载记录
+                downloadhis = DownloadHistoryOper()
+                downloadhis.add(
+                    path=str(download_path),
+                    type=_media.type.value,
+                    title=_media.title,
+                    year=_media.year,
+                    tmdbid=_media.tmdb_id,
+                    imdbid=_media.imdb_id,
+                    tvdbid=_media.tvdb_id,
+                    doubanid=_media.douban_id,
+                    seasons=_meta.season,
+                    episodes=download_episodes or _meta.episode,
+                    image=_media.get_backdrop_image(),
+                    downloader=_downloader,
+                    download_hash=_hash,
+                    torrent_name=_torrent.title,
+                    torrent_description=_torrent.description,
+                    torrent_site=_torrent.site_name,
                     userid=userid,
-                    username=username
-                ),
-                meta=_meta,
-                mediainfo=_media,
-                torrentinfo=_torrent,
-                download_episodes=download_episodes,
-                username=username,
-            )
+                    username=username,
+                    channel=channel.value if channel else None,
+                    date=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+                    media_category=_media.category,
+                    episode_group=_media.episode_group,
+                    note={"source": source}
+                )
+
+                # 登记下载文件
+                files_to_add = []
+                for file in _file_list:
+                    if episodes:
+                        # 识别文件集
+                        file_meta = MetaInfo(Path(file).stem)
+                        if not file_meta.begin_episode \
+                                or file_meta.begin_episode not in episodes:
+                            continue
+                    # 只处理视频格式
+                    if not Path(file).suffix \
+                            or Path(file).suffix.lower() not in settings.RMT_MEDIAEXT:
+                        continue
+                    files_to_add.append({
+                        "download_hash": _hash,
+                        "downloader": _downloader,
+                        "fullpath": str(_save_path / file),
+                        "savepath": str(_save_path),
+                        "filepath": file,
+                        "torrentname": _meta.org_string,
+                    })
+                if files_to_add:
+                    downloadhis.add_files(files_to_add)
+
+                # 下载成功发送消息
+                self.post_message(
+                    Notification(
+                        channel=channel,
+                        source=source if channel else None,
+                        mtype=NotificationType.Download,
+                        ctype=ContentType.DownloadAdded,
+                        image=_media.get_message_image(),
+                        link=settings.MP_DOMAIN('/#/downloading'),
+                        userid=userid,
+                        username=username
+                    ),
+                    meta=_meta,
+                    mediainfo=_media,
+                    torrentinfo=_torrent,
+                    download_episodes=download_episodes,
+                    username=username,
+                )
             # 下载成功后处理
             self.download_added(context=context, download_dir=download_dir, torrent_content=torrent_content)
             # 广播事件
