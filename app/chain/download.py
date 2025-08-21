@@ -183,7 +183,7 @@ class DownloadChain(ChainBase):
                 "save_path": save_path,
                 "userid": userid,
                 "username": username,
-                "media_category": _media.category
+                "media_category": label or _media.category
             }
         )
         # 触发资源下载事件
@@ -201,12 +201,13 @@ class DownloadChain(ChainBase):
                 save_path = event_data.options.get("save_path")
 
         # 补充完整的media数据
-        if not _media.genre_ids:
-            new_media = self.recognize_media(mtype=_media.type, tmdbid=_media.tmdb_id,
-                                             doubanid=_media.douban_id, bangumiid=_media.bangumi_id,
-                                             episode_group=_media.episode_group)
-            if new_media:
-                _media = new_media
+        if _media:
+            if not _media.genre_ids:
+                new_media = self.recognize_media(mtype=_media.type, tmdbid=_media.tmdb_id,
+                                                doubanid=_media.douban_id, bangumiid=_media.bangumi_id,
+                                                episode_group=_media.episode_group)
+                if new_media:
+                    _media = new_media
 
         # 实际下载的集数
         download_episodes = StringUtils.format_ep(list(episodes)) if episodes else None
@@ -265,7 +266,7 @@ class DownloadChain(ChainBase):
                                                 cookie=_torrent.site_cookie,
                                                 episodes=episodes,
                                                 download_dir=download_dir,
-                                                category=_media.category,
+                                                category=label or _media.category,
                                                 label=label,
                                                 downloader=downloader or _site_downloader)
         if result:
@@ -273,7 +274,7 @@ class DownloadChain(ChainBase):
         else:
             _downloader, _hash, _layout, error_msg = None, None, None, "未找到下载器"
 
-        if _hash:
+        if _hash and _media:
             # `不创建子文件夹` 或 `不存在子文件夹`
             if _layout == "NoSubfolder" or not _folder_name:
                 # 下载路径记录至文件
