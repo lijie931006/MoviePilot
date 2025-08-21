@@ -70,6 +70,8 @@ RUN ${VENV_PATH}/bin/pip-compile requirements.in \
 # 复制应用代码
 COPY . .
 
+RUN ls -l /app/docker
+
 # 配置nginx和其他文件
 RUN cp -f /app/docker/nginx.common.conf /etc/nginx/common.conf \
     && cp -f /app/docker/nginx.template.conf /etc/nginx/nginx.template.conf \
