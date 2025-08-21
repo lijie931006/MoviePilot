@@ -20,7 +20,7 @@ jobs:
 
     - name: Build and Push Docker image
       run: |
-        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/moviepilot-v2:latest .
+        docker build -f docker/Dockerfile -t ${{ secrets.DOCKERHUB_USERNAME }}/moviepilot-v2:latest .
         docker push ${{ secrets.DOCKERHUB_USERNAME }}/moviepilot-v2:latest
 
     - name: Deploy to Server via SSH
