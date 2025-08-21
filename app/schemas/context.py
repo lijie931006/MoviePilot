@@ -246,6 +246,8 @@ class Context(BaseModel):
     media_info: Optional[Union[MediaInfo, Any]] = None
     # 种子信息
     torrent_info: Optional[TorrentInfo] = None
+    
+    match_media: Optional[bool] = True
 
 
 class MediaSeason(BaseModel):

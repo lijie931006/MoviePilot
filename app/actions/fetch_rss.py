@@ -21,7 +21,7 @@ class FetchRssParams(ActionParams):
     content_type: Optional[str] = Field(default=None, description="Content-Type")
     referer: Optional[str] = Field(default=None, description="Referer")
     ua: Optional[str] = Field(default=None, description="User-Agent")
-    match_media: Optional[str] = Field(default=None, description="匹配媒体信息")
+    match_media: Optional[bool] = Field(default=False, description="匹配媒体信息")
 
 
 class FetchRssAction(BaseAction):
@@ -102,7 +102,7 @@ class FetchRssAction(BaseAction):
                 if not mediainfo:
                     logger.warning(f"{torrentinfo.title} 未识别到媒体信息")
                     continue
-            self._rss_torrents.append(Context(meta_info=meta, media_info=mediainfo, torrent_info=torrentinfo))
+            self._rss_torrents.append(Context(meta_info=meta, media_info=mediainfo, torrent_info=torrentinfo, match_media=params.match_media))
 
         if self._rss_torrents:
             logger.info(f"获取到 {len(self._rss_torrents)} 个RSS资源")

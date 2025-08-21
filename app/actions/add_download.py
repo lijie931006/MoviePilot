@@ -64,35 +64,36 @@ class AddDownloadAction(BaseAction):
             if self.check_cache(workflow_id, cache_key):
                 logger.info(f"{t.torrent_info.title} 已添加过下载，跳过")
                 continue
-            if not t.meta_info:
-                t.meta_info = MetaInfo(title=t.torrent_info.title, subtitle=t.torrent_info.description)
-            if not t.media_info:
-                t.media_info = MediaChain().recognize_media(meta=t.meta_info)
-            if not t.media_info:
-                self._has_error = True
-                logger.warning(f"{t.torrent_info.title} 未识别到媒体信息，无法下载")
-                continue
-            if params.only_lack:
-                exists_info = DownloadChain().media_exists(t.media_info)
-                if exists_info:
-                    if t.media_info.type == MediaType.MOVIE:
-                        # 电影
-                        logger.warning(f"{t.torrent_info.title} 媒体库中已存在，跳过")
-                        continue
-                    else:
-                        # 电视剧
-                        exists_seasons = exists_info.seasons or {}
-                        if len(t.meta_info.season_list) > 1:
-                            # 多季不下载
-                            logger.warning(f"{t.meta_info.title} 有多季，跳过")
+            if t.match_media:
+                if not t.meta_info:
+                    t.meta_info = MetaInfo(title=t.torrent_info.title, subtitle=t.torrent_info.description)
+                if not t.media_info:
+                    t.media_info = MediaChain().recognize_media(meta=t.meta_info)
+                if not t.media_info:
+                    self._has_error = True
+                    logger.warning(f"{t.torrent_info.title} 未识别到媒体信息，无法下载")
+                    continue
+                if params.only_lack:
+                    exists_info = DownloadChain().media_exists(t.media_info)
+                    if exists_info:
+                        if t.media_info.type == MediaType.MOVIE:
+                            # 电影
+                            logger.warning(f"{t.torrent_info.title} 媒体库中已存在，跳过")
                             continue
                         else:
-                            exists_episodes = exists_seasons.get(t.meta_info.begin_season)
-                            if exists_episodes:
-                                if set(t.meta_info.episode_list).issubset(exists_episodes):
-                                    logger.warning(
-                                        f"{t.meta_info.title} 第 {t.meta_info.begin_season} 季第 {t.meta_info.episode_list} 集已存在，跳过")
-                                    continue
+                            # 电视剧
+                            exists_seasons = exists_info.seasons or {}
+                            if len(t.meta_info.season_list) > 1:
+                                # 多季不下载
+                                logger.warning(f"{t.meta_info.title} 有多季，跳过")
+                                continue
+                            else:
+                                exists_episodes = exists_seasons.get(t.meta_info.begin_season)
+                                if exists_episodes:
+                                    if set(t.meta_info.episode_list).issubset(exists_episodes):
+                                        logger.warning(
+                                            f"{t.meta_info.title} 第 {t.meta_info.begin_season} 季第 {t.meta_info.episode_list} 集已存在，跳过")
+                                        continue
 
             _started = True
             did = DownloadChain().download_single(context=t,
