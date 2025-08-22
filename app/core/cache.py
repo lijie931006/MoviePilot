@@ -789,15 +789,15 @@ def Cache(maxsize: Optional[int] = None, ttl: Optional[int] = None) -> CacheBack
     """
     根据配置获取缓存后端实例（内存或Redis），maxsize仅在未启用Redis时生效
 
-    :param maxsize: 缓存的最大条目数，仅使用cachetools时生效，不传入默认1024
+    :param maxsize: 缓存的最大条目数，仅使用cachetools时生效
     :param ttl: 缓存的默认存活时间，单位秒
     :return: 返回缓存后端实例
     """
     if settings.CACHE_BACKEND_TYPE == "redis":
         return RedisBackend(ttl=ttl)
     else:
-        # 使用内存缓存，maxsize需要有值，默认1024
-        return MemoryBackend(maxsize=maxsize or 1024, ttl=ttl)
+        # 使用内存缓存，maxsize需要有值
+        return MemoryBackend(maxsize=maxsize, ttl=ttl)
 
 
 class TTLCache:
@@ -939,7 +939,7 @@ class TTLCache:
             logger.warning(f"缓存关闭失败: {e}")
 
 
-def cached(region: Optional[str] = None, maxsize: Optional[int] = None, ttl: Optional[int] = None,
+def cached(region: Optional[str] = None, maxsize: Optional[int] = 1024, ttl: Optional[int] = None,
            skip_none: Optional[bool] = True, skip_empty: Optional[bool] = False):
     """
     自定义缓存装饰器，支持为每个 key 动态传递 maxsize 和 ttl
