@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional, Generator, AsyncGenerator, Tuple
 import aiofiles
 import aioshutil
 from anyio import Path as AsyncPath
-from cachetools import TTLCache as CacheToolsTTLCache
+from cachetools import TTLCache as MemoryTTLCache
 from cachetools.keys import hashkey
 
 from app.core.config import settings
@@ -249,24 +249,24 @@ class AsyncCacheBackend(ABC):
         return settings.CACHE_BACKEND_TYPE == "redis"
 
 
-class CacheToolsBackend(CacheBackend):
+class MemoryBackend(CacheBackend):
     """
     基于 `cachetools.TTLCache` 实现的缓存后端
     """
 
-    def __init__(self, maxsize: Optional[int] = 1024, ttl: Optional[int] = 1800):
+    def __init__(self, maxsize: Optional[int] = None, ttl: Optional[int] = None):
         """
         初始化缓存实例
 
         :param maxsize: 缓存的最大条目数
         :param ttl: 默认缓存存活时间，单位秒
         """
-        self.maxsize = maxsize
+        self.maxsize = maxsize or 1024  # 未设置时默认最大条目数为 1024
         self.ttl = ttl
         # 存储各个 region 的缓存实例，region -> TTLCache
-        self._region_caches: Dict[str, CacheToolsTTLCache] = {}
+        self._region_caches: Dict[str, MemoryTTLCache] = {}
 
-    def __get_region_cache(self, region: str) -> Optional[CacheToolsTTLCache]:
+    def __get_region_cache(self, region: str) -> Optional[MemoryTTLCache]:
         """
         获取指定区域的缓存实例，如果不存在则返回 None
         """
@@ -276,19 +276,18 @@ class CacheToolsBackend(CacheBackend):
     def set(self, key: str, value: Any, ttl: Optional[int] = None,
             region: Optional[str] = DEFAULT_CACHE_REGION, **kwargs) -> None:
         """
-        设置缓存值支持每个 key 独立配置 TTL 和 Maxsize
+        设置缓存值支持每个 key 独立配置 TTL
 
         :param key: 缓存的键
         :param value: 缓存的值
-        :param ttl: 缓存的存活时间，单位秒如果未传入则使用默认值
+        :param ttl: 缓存的存活时间，不传入为永久缓存，单位秒
         :param region: 缓存的区
-        :param kwargs: maxsize: 缓存的最大条目数如果未传入则使用默认值
         """
         ttl = ttl or self.ttl
         maxsize = kwargs.get("maxsize", self.maxsize)
         region = self.get_region(region)
         # 如果该 key 尚未有缓存实例，则创建一个新的 TTLCache 实例
-        region_cache = self._region_caches.setdefault(region, CacheToolsTTLCache(maxsize=maxsize, ttl=ttl))
+        region_cache = self._region_caches.setdefault(region, MemoryTTLCache(maxsize=maxsize, ttl=ttl))
         # 设置缓存值
         with lock:
             region_cache[key] = value
@@ -362,6 +361,7 @@ class CacheToolsBackend(CacheBackend):
         region_cache = self.__get_region_cache(region)
         if region_cache is None:
             yield from ()
+            return
         for item in region_cache.items():
             yield item
 
@@ -393,7 +393,7 @@ class RedisBackend(CacheBackend):
 
         :param key: 缓存的键
         :param value: 缓存的值
-        :param ttl: 缓存的存活时间，单位秒如果未传入则使用默认值
+        :param ttl: 缓存的存活时间，未传入则为永久缓存，单位秒
         :param region: 缓存的区
         :param kwargs: kwargs
         """
@@ -474,7 +474,7 @@ class AsyncRedisBackend(AsyncCacheBackend):
 
         :param key: 缓存的键
         :param value: 缓存的值
-        :param ttl: 缓存的存活时间，单位秒如果未传入则使用默认值
+        :param ttl: 缓存的存活时间，未传入则为永久缓存，单位秒
         :param region: 缓存的区
         :param kwargs: kwargs
         """
@@ -635,6 +635,7 @@ class FileBackend(CacheBackend):
         cache_path = self.base / region
         if not cache_path.exists():
             yield from ()
+            return
         for item in cache_path.iterdir():
             if item.is_file():
                 with open(item, 'r') as f:
@@ -747,6 +748,7 @@ class AsyncFileBackend(AsyncCacheBackend):
         cache_path = AsyncPath(self.base) / region
         if not await cache_path.exists():
             yield "", None
+            return
         async for item in cache_path.iterdir():
             if await item.is_file():
                 async with aiofiles.open(item, 'r') as f:
@@ -759,9 +761,9 @@ class AsyncFileBackend(AsyncCacheBackend):
         pass
 
 
-def get_file_cache_backend(base: Path = settings.TEMP_PATH, ttl: Optional[int] = None) -> CacheBackend:
+def FileCache(base: Path = settings.TEMP_PATH, ttl: Optional[int] = None) -> CacheBackend:
     """
-    获取文件缓存后端实例（Redis或文件系统）
+    获取文件缓存后端实例（Redis或文件系统），ttl仅在Redis环境中有效
     """
     if settings.CACHE_BACKEND_TYPE == "redis":
         # 如果使用 Redis，则设置缓存的存活时间为配置的天数转换为秒
@@ -771,9 +773,9 @@ def get_file_cache_backend(base: Path = settings.TEMP_PATH, ttl: Optional[int] =
         return FileBackend(base=base)
 
 
-def get_async_file_cache_backend(base: Path = settings.TEMP_PATH, ttl: Optional[int] = None) -> AsyncCacheBackend:
+def AsyncFileCache(base: Path = settings.TEMP_PATH, ttl: Optional[int] = None) -> AsyncCacheBackend:
     """
-    获取文件异步缓存后端实例（Redis或文件系统）
+    获取文件异步缓存后端实例（Redis或文件系统），ttl仅在Redis环境中有效
     """
     if settings.CACHE_BACKEND_TYPE == "redis":
         # 如果使用 Redis，则设置缓存的存活时间为配置的天数转换为秒
@@ -783,9 +785,9 @@ def get_async_file_cache_backend(base: Path = settings.TEMP_PATH, ttl: Optional[
         return AsyncFileBackend(base=base)
 
 
-def get_cache_backend(maxsize: Optional[int] = 512, ttl: Optional[int] = 1800) -> CacheBackend:
+def Cache(maxsize: Optional[int] = None, ttl: Optional[int] = None) -> CacheBackend:
     """
-    根据配置获取缓存后端实例（内存或Redis）
+    根据配置获取缓存后端实例（内存或Redis），maxsize仅在未启用Redis时生效
 
     :param maxsize: 缓存的最大条目数，仅使用cachetools时生效
     :param ttl: 缓存的默认存活时间，单位秒
@@ -794,12 +796,13 @@ def get_cache_backend(maxsize: Optional[int] = 512, ttl: Optional[int] = 1800) -
     if settings.CACHE_BACKEND_TYPE == "redis":
         return RedisBackend(ttl=ttl)
     else:
-        return CacheToolsBackend(maxsize=maxsize, ttl=ttl)
+        # 使用内存缓存，maxsize需要有值
+        return MemoryBackend(maxsize=maxsize, ttl=ttl)
 
 
 class TTLCache:
     """
-    TTL缓存类，根据配置自动选择使用Redis或cachetools
+    TTL缓存类，根据配置自动选择使用Redis或cachetools，maxsize仅在未启用Redis时生效
 
     特性：
     - 提供与cachetools.TTLCache相同的接口
@@ -807,23 +810,26 @@ class TTLCache:
     - 支持Redis和cachetools的切换
     """
 
-    def __init__(self, maxsize: int = 128, ttl: int = 1800):
+    def __init__(self, region: Optional[str] = DEFAULT_CACHE_REGION,
+                 maxsize: int = None, ttl: int = None):
         """
         初始化TTL缓存
 
+        :param region: 缓存的区，默认为 DEFAULT_CACHE_REGION
         :param maxsize: 缓存的最大条目数
         :param ttl: 缓存的存活时间，单位秒
         """
+        self.region = region
         self.maxsize = maxsize
         self.ttl = ttl
-        self._backend = get_cache_backend(maxsize=maxsize, ttl=ttl)
+        self._backend = Cache(maxsize=maxsize, ttl=ttl)
 
     def __getitem__(self, key: str):
         """
         获取缓存项
         """
         try:
-            value = self._backend.get(key)
+            value = self._backend.get(key, region=self.region)
             if value is not None:
                 return value
         except Exception as e:
@@ -836,7 +842,7 @@ class TTLCache:
         设置缓存项
         """
         try:
-            self._backend.set(key, value, ttl=self.ttl)
+            self._backend.set(key, value, ttl=self.ttl, region=self.region)
         except Exception as e:
             logger.warning(f"缓存设置失败: {e}")
 
@@ -845,7 +851,7 @@ class TTLCache:
         删除缓存项
         """
         try:
-            self._backend.delete(key)
+            self._backend.delete(key, region=self.region)
         except Exception as e:
             logger.warning(f"缓存删除失败: {e}")
 
@@ -854,7 +860,7 @@ class TTLCache:
         检查键是否存在
         """
         try:
-            return self._backend.exists(key)
+            return self._backend.exists(key, region=self.region)
         except Exception as e:
             logger.warning(f"缓存检查失败: {e}")
             return False
@@ -863,15 +869,25 @@ class TTLCache:
         """
         返回缓存的迭代器
         """
-        for key, _ in self._backend.items():
+        for key, _ in self._backend.items(region=self.region):
             yield key
+
+    def set(self, key: str, value: Any, ttl: Optional[int] = None):
+        """
+        设置缓存项，支持自定义 TTL
+        """
+        try:
+            ttl = ttl or self.ttl
+            self._backend.set(key, value, ttl=ttl, region=self.region)
+        except Exception as e:
+            logger.warning(f"缓存设置失败: {e}")
 
     def get(self, key: str, default: Any = None):
         """
         获取缓存项，如果不存在返回默认值
         """
         try:
-            value = self._backend.get(key)
+            value = self._backend.get(key, region=self.region)
             if value is not None:
                 return value
         except Exception as e:
@@ -879,14 +895,39 @@ class TTLCache:
 
         return default
 
+    def delete(self, key: str):
+        """
+        删除缓存项
+        """
+        try:
+            self._backend.delete(key, region=self.region)
+        except Exception as e:
+            logger.warning(f"缓存删除失败: {e}")
+
+    def items(self):
+        """
+        获取缓存的所有键值对
+        """
+        try:
+            return self._backend.items(region=self.region)
+        except Exception as e:
+            logger.warning(f"缓存获取失败: {e}")
+            return []
+
     def clear(self):
         """
         清空缓存
         """
         try:
-            self._backend.clear()
+            self._backend.clear(region=self.region)
         except Exception as e:
             logger.warning(f"缓存清空失败: {e}")
+
+    def is_redis(self) -> bool:
+        """
+        判断当前缓存后端是否为 Redis
+        """
+        return self._backend.is_redis()
 
     def close(self):
         """
@@ -898,20 +939,20 @@ class TTLCache:
             logger.warning(f"缓存关闭失败: {e}")
 
 
-def cached(region: Optional[str] = None, maxsize: Optional[int] = 512, ttl: Optional[int] = 1800,
+def cached(region: Optional[str] = None, maxsize: Optional[int] = 1024, ttl: Optional[int] = None,
            skip_none: Optional[bool] = True, skip_empty: Optional[bool] = False):
     """
     自定义缓存装饰器，支持为每个 key 动态传递 maxsize 和 ttl
 
     :param region: 缓存的区
-    :param maxsize: 缓存的最大条目数，默认值为 512
-    :param ttl: 缓存的存活时间，单位秒，默认值为 1800
+    :param maxsize: 缓存的最大条目数
+    :param ttl: 缓存的存活时间，单位秒，未传入则为永久缓存，单位秒
     :param skip_none: 跳过 None 缓存，默认为 True
     :param skip_empty: 跳过空值缓存（如 None, [], {}, "", set()），默认为 False
     :return: 装饰器函数
     """
     # 缓存后端实例
-    cache_backend = get_cache_backend(maxsize=maxsize, ttl=ttl)
+    cache_backend = Cache(maxsize=maxsize, ttl=ttl)
 
     def should_cache(value: Any) -> bool:
         """
