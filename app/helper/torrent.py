@@ -16,11 +16,10 @@ from app.db.systemconfig_oper import SystemConfigOper
 from app.log import logger
 from app.schemas.types import MediaType, SystemConfigKey
 from app.utils.http import RequestUtils
-from app.utils.singleton import WeakSingleton
 from app.utils.string import StringUtils
 
 
-class TorrentHelper(metaclass=WeakSingleton):
+class TorrentHelper:
     """
     种子帮助类
     """
@@ -199,8 +198,14 @@ class TorrentHelper(metaclass=WeakSingleton):
         :param torrent_content: 种子内容
         :return: 文件夹名、文件清单，单文件种子返回空文件夹名
         """
+
         if not torrent_content:
             return "", []
+
+        # 检查是否为磁力链接
+        if StringUtils.is_magnet_link(torrent_content):
+            return "", []
+
         try:
             # 解析种子内容
             torrentinfo = Torrent.from_string(torrent_content)
