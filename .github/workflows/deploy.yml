@@ -18,10 +18,14 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+    - name: Get APP_VERSION from version.py
+      run: |
+        echo "APP_VERSION=$(python -c 'from version import APP_VERSION; print(APP_VERSION)')" >> $GITHUB_ENV
+
     - name: Build and Push Docker image
       run: |
-        docker build -f docker/Dockerfile -t ${{ secrets.DOCKERHUB_USERNAME }}/moviepilot-v2:latest .
-        docker push ${{ secrets.DOCKERHUB_USERNAME }}/moviepilot-v2:latest
+        docker build -f docker/Dockerfile -t ${{ secrets.DOCKERHUB_USERNAME }}/moviepilot-v2:${{ env.APP_VERSION }} .
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/moviepilot-v2:${{ env.APP_VERSION }}
 
     # - name: Deploy to Server via SSH
     #   uses: appleboy/ssh-action@v0.1.6
