@@ -9,6 +9,8 @@ from app.core.config import global_vars
 from app.core.metainfo import MetaInfo
 from app.log import logger
 from app.schemas import ActionParams, ActionContext, DownloadTask, MediaType
+from app.core.cache import Cache
+import difflib
 
 
 class AddDownloadParams(ActionParams):
@@ -49,6 +51,9 @@ class AddDownloadAction(BaseAction):
     @property
     def success(self) -> bool:
         return not self._has_error
+    
+    def difflib_similarity(s1, s2):
+        return difflib.SequenceMatcher(None, s1, s2).ratio()
 
     def execute(self, workflow_id: int, params: dict, context: ActionContext) -> ActionContext:
         """
@@ -56,6 +61,9 @@ class AddDownloadAction(BaseAction):
         """
         params = AddDownloadParams(**params)
         _started = False
+        
+        cache = Cache()
+            
         for t in context.torrents:
             if global_vars.is_workflow_stopped(workflow_id):
                 break
@@ -64,6 +72,24 @@ class AddDownloadAction(BaseAction):
             if self.check_cache(workflow_id, cache_key):
                 logger.info(f"{t.torrent_info.title} 已添加过下载，跳过")
                 continue
+            
+            region = "action_download"
+            
+            # 找到所有region下的key
+            keys = cache.items(region=region)
+            
+            # 已下载默认为false
+            downloaded = False 
+            
+            for key in keys:
+                if(self.difflib_similarity(key, t.torrent_info.title) > 0.8):
+                    logger.info(f"{t.torrent_info.title} 与已添加的下载任务 {key} 相似度过高，跳过")
+                    downloaded = True
+                    break
+            # 如果已下载，跳过
+            if downloaded:
+                continue
+
             if t.match_media:
                 if not t.meta_info:
                     t.meta_info = MetaInfo(title=t.torrent_info.title, subtitle=t.torrent_info.description)
@@ -104,6 +130,8 @@ class AddDownloadAction(BaseAction):
                 self._added_downloads.append(did)
                 # 保存缓存
                 self.save_cache(workflow_id, cache_key)
+                # 把下载的标题缓存起来用于相似度判断
+                cache.set(t.torrent_info.title, 1, expire=60*60*24*365, region=region)  
 
         if self._added_downloads:
             logger.info(f"已添加 {len(self._added_downloads)} 个下载任务")
