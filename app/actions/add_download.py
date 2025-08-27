@@ -131,7 +131,7 @@ class AddDownloadAction(BaseAction):
                 # 保存缓存
                 self.save_cache(workflow_id, cache_key)
                 # 把下载的标题缓存起来用于相似度判断
-                cache.set(t.torrent_info.title, 1, expire=60*60*24*365, region=region)  
+                cache.set(t.torrent_info.title, 1, ttl=60*60*24*365, region=region)  
 
         if self._added_downloads:
             logger.info(f"已添加 {len(self._added_downloads)} 个下载任务")
