@@ -78,6 +78,8 @@ class AddDownloadAction(BaseAction):
             # 找到所有region下的key
             keys = cache.items(region=region)
             
+            logger.info(f"keys: {keys}")
+            
             # 已下载默认为false
             downloaded = False 
             
