@@ -78,12 +78,13 @@ class AddDownloadAction(BaseAction):
             # 找到所有region下的key
             keys = cache.items(region=region)
             
-            logger.info(f"keys: {keys}")
+            # logger.info(f"keys: {keys}")
             
             # 已下载默认为false
             downloaded = False 
             
             for key in keys:
+                logger.info(f"Comparing {key} with {t.torrent_info.title}")
                 if(self.difflib_similarity(key, t.torrent_info.title) > 0.8):
                     logger.info(f"{t.torrent_info.title} 与已添加的下载任务 {key} 相似度过高，跳过")
                     downloaded = True
