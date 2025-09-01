@@ -51,8 +51,8 @@ class AddDownloadAction(BaseAction):
     @property
     def success(self) -> bool:
         return not self._has_error
-    
-    def difflib_similarity(s1, s2):
+
+    def difflib_similarity(self, s1, s2):
         return difflib.SequenceMatcher(None, s1, s2).ratio()
 
     def execute(self, workflow_id: int, params: dict, context: ActionContext) -> ActionContext:
