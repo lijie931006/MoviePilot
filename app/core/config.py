@@ -114,7 +114,7 @@ class ConfigModel(BaseModel):
     # 数据库连接池获取连接的超时时间（秒）
     DB_POOL_TIMEOUT: int = 30
     # SQLite 连接池大小
-    DB_SQLITE_POOL_SIZE: int = 30
+    DB_SQLITE_POOL_SIZE: int = 10
     # SQLite 连接池溢出数量
     DB_SQLITE_MAX_OVERFLOW: int = 50
     # PostgreSQL 主机地址
@@ -128,7 +128,7 @@ class ConfigModel(BaseModel):
     # PostgreSQL 密码
     DB_POSTGRESQL_PASSWORD: str = "moviepilot"
     # PostgreSQL 连接池大小
-    DB_POSTGRESQL_POOL_SIZE: int = 30
+    DB_POSTGRESQL_POOL_SIZE: int = 10
     # PostgreSQL 连接池溢出数量
     DB_POSTGRESQL_MAX_OVERFLOW: int = 50
 
@@ -249,6 +249,8 @@ class ConfigModel(BaseModel):
     SUBSCRIBE_STATISTIC_SHARE: bool = True
     # 订阅搜索开关
     SUBSCRIBE_SEARCH: bool = False
+    # 订阅搜索时间间隔（小时）
+    SUBSCRIBE_SEARCH_INTERVAL: int = 24
     # 检查本地媒体库是否存在资源开关
     LOCAL_EXISTS_SEARCH: bool = False
 
