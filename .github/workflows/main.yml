@@ -15,5 +15,4 @@ jobs:
           owner: jxxghp/MoviePilot
           base: v2
           head: v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
