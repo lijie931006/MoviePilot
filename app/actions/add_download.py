@@ -11,6 +11,7 @@ from app.log import logger
 from app.schemas import ActionParams, ActionContext, DownloadTask, MediaType
 from app.core.cache import Cache
 import difflib
+from urllib.parse import unquote
 
 
 class AddDownloadParams(ActionParams):
@@ -84,8 +85,12 @@ class AddDownloadAction(BaseAction):
             downloaded = False 
             
             for key in keys:
-                logger.info(f"Comparing {key} with {t.torrent_info.title}")
-                if(self.difflib_similarity(key, t.torrent_info.title) > 0.8):
+                # 提取并解码键
+                encoded_key = key[0]  # 获取元组的第一个元素（编码的字符串）
+                decoded_key = unquote(encoded_key)  # 解码URL编码的字符串
+                
+                logger.info(f"Comparing {decoded_key} with {t.torrent_info.title}")
+                if(self.difflib_similarity(decoded_key, t.torrent_info.title) > 0.8):
                     logger.info(f"{t.torrent_info.title} 与已添加的下载任务 {key} 相似度过高，跳过")
                     downloaded = True
                     break
