@@ -12,7 +12,7 @@ jobs:
       - name: Sync Fork
         uses: tgymnich/fork-sync@v1.8
         with:
-          owner: jxxghp/MoviePilot
+          owner: MoviePilot
           base: v2
           head: v2
           token: ${{ secrets.GITHUB_TOKEN }}
