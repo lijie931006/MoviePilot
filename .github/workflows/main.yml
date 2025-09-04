@@ -2,21 +2,17 @@ name: Sync Fork with Upstream
 
 on:
   schedule:
-    - cron: '0 0 * * *' # 每天 UTC 时间 00:00 (即北京时间早上8点) 运行一次
-  workflow_dispatch: # 允许在 GitHub 页面上手动触发此工作流
+    - cron: '0 0 * * *' # 每天 UTC 时间 00:00 (北京时间早上8点) 运行一次
+  workflow_dispatch:
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Sync Fork
-        uses: upstream-sync/sync-fork@v1
+        uses: tgymnich/fork-sync@v1.8
         with:
-          upstream_repository: jxxghp/MoviePilot
-          target_branch: v2 # 你的 Fork 和上游仓库要同步的分支名，可能是 master
-          source_branch: v2 # 上游仓库的分支名，同上
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # 使用 GitHub 自动提供的令牌
+          owner: MoviePilot
+          base: v2
+          head: v2
+          token: ${{ secrets.GITHUB_TOKEN }}
