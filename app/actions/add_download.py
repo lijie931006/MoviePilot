@@ -88,12 +88,10 @@ class AddDownloadAction(BaseAction):
                 # 提取并解码键
                 encoded_key = key[0]  # 获取元组的第一个元素（编码的字符串）
                 decoded_key = unquote(encoded_key)  # 解码URL编码的字符串
-                
-                logger.info(f"Comparing {decoded_key} with {t.torrent_info.title}")
+                # 计算相似度
                 diff_ratio = self.difflib_similarity(decoded_key, t.torrent_info.title)
-                logger.info(f"Similarity ratio: {diff_ratio}")
                 if diff_ratio > 0.8:
-                    logger.info(f"{t.torrent_info.title} 与已添加的下载任务 {key} 相似度过高，跳过")
+                    logger.info(f"{t.torrent_info.title} 与已添加的下载任务 {decoded_key} 相似度过高，跳过")
                     downloaded = True
                     break
             # 如果已下载，跳过

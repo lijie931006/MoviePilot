@@ -24,6 +24,7 @@ config/cache/
 *.log
 .vscode
 venv
+.venv
 
 # Pylint
 pylint-report.json
